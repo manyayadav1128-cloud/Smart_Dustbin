@@ -1,0 +1,154 @@
+#define BLYNK_TEMPLATE_ID "templete name"
+#define BLYNK_TEMPLATE_NAME "templete name"
+#define BLYNK_AUTH_TOKEN "authentication token"
+
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+#include <Servo.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+Servo servo;
+
+#define IR_PIN D4        
+#define TRIG_PIN D6      
+#define ECHO_PIN D7      
+#define SERVO_PIN D5     
+
+char ssid[] = "ssid";
+char pass[] = "pass";
+
+
+long duration;
+int distance;
+int level;
+int percentage;
+
+const int dustbinDepth = 25;   // Dustbin depth in cm
+
+bool eventSent = false;
+
+void setup()
+{
+  Serial.begin(9600);
+
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
+
+  lcd.init();
+  lcd.backlight();
+
+  lcd.setCursor(0,0);
+  lcd.print("Smart Dustbin");
+  delay(2000);
+  lcd.clear();
+
+  servo.attach(SERVO_PIN);
+  servo.write(0);
+
+  pinMode(IR_PIN, INPUT);
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+}
+
+void loop()
+{
+  Blynk.run();
+
+  int sensor = digitalRead(IR_PIN);
+
+
+  if(sensor == HIGH)
+  {
+    lcd.setCursor(0,0);
+    lcd.print("Opening...     ");
+
+    servo.write(180);
+
+    delay(3000);
+
+    servo.write(0);
+
+    lcd.setCursor(0,0);
+    lcd.print("Closing...     ");
+  }
+  else
+  {
+    servo.write(0);
+
+    lcd.setCursor(0,0);
+    lcd.print("Closing...     ");
+  }
+
+  checkDustLevel();
+
+  delay(500);
+}
+
+void checkDustLevel()
+{
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+
+  digitalWrite(TRIG_PIN, LOW);
+
+  duration = pulseIn(ECHO_PIN, HIGH, 30000);
+
+  if(duration == 0)
+  {
+    Serial.println("No Echo");
+    return;
+  }
+
+  distance = duration * 0.034 / 2;
+
+  level = dustbinDepth - distance;
+
+  if(level < 0)
+    level = 0;
+
+  if(level > dustbinDepth)
+    level = dustbinDepth;
+
+  percentage = (level * 100) / dustbinDepth;
+
+  lcd.setCursor(0,1);
+  lcd.print("Fill:");
+  lcd.print(percentage);
+  lcd.print("%   ");
+
+  Serial.print("Distance : ");
+  Serial.print(distance);
+  Serial.print(" cm");
+
+  Serial.print("  Level : ");
+  Serial.print(level);
+  Serial.print(" cm");
+
+  Serial.print("  ");
+  Serial.print(percentage);
+  Serial.println("%");
+
+  Blynk.virtualWrite(V0, percentage);
+
+  if(percentage >= 80)
+  {
+    lcd.setCursor(0,0);
+    lcd.print("Bin Full!!!    ");
+
+    if(!eventSent)
+    {
+      Blynk.logEvent("dustbin_full", "Dustbin is Full! Please Empty.");
+      Serial.println("Dustbin Full Event Sent");
+      eventSent = true;
+    }
+  }
+  else
+  {
+    eventSent = false;
+  }
+}
