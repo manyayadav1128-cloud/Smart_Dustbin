@@ -21,9 +21,9 @@ An ESP8266-based automatic touchless dustbin that opens its lid using an IR sens
 | Component | Notes |
 |---|---|
 | ESP8266 (NodeMCU / Wemos D1 Mini) | Main controller with built-in WiFi |
-| IR Proximity Sensor | Detects hand/object to trigger lid opening — connected to D4 |
+| IR Sensor | Detects hand/object to trigger lid opening — connected to D4 |
 | Ultrasonic Sensor (HC-SR04) | Measures dustbin fill level — Trig on D6, Echo on D7 |
-| SG90 (or similar) Servo Motor | Opens/closes the lid — connected to D5 |
+| Servo Motor | Opens/closes the lid — connected to D5 |
 | 16x2 I2C LCD Display | Shows status and fill percentage (I2C address 0x27) |
 | Dustbin enclosure | Sized so sensor readings match `dustbinDepth` |
 | Power supply | 5V supply recommended, especially for the servo |
